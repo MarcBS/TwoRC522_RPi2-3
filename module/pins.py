@@ -99,5 +99,6 @@ class PinControl(PinsGPIO):
         return self.gpio.cleanup()
 
     def __del__(self):
-        self.CLEAN()
+        #self.CLEAN()
+        pass
         

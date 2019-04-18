@@ -22,7 +22,7 @@ def end_read(signal,frame):
     global continue_reading
     print "Ctrl+C captured, ending read."
     continue_reading = False
-    GPIO.cleanup()
+    #GPIO.cleanup()
 
     signal.signal(signal.SIGINT, end_read)
 
@@ -52,6 +52,8 @@ class Nfc522(object):
 
         # Get the UID of the card
         (status,uid) = self.MIFAREReader.MFRC522_Anticoll()
+
+        return uid
 
         # If we have the UID, continue
         if status == self.MIFAREReader.MI_OK:
