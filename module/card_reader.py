@@ -19,76 +19,73 @@ continue_reading = True
 
 
 def end_read(signal,frame):
-        global continue_reading
-        print "Ctrl+C captured, ending read."
-        continue_reading = False
-        GPIO.cleanup()
+    global continue_reading
+    print "Ctrl+C captured, ending read."
+    continue_reading = False
+    GPIO.cleanup()
 
-        signal.signal(signal.SIGINT, end_read)
+    signal.signal(signal.SIGINT, end_read)
 
 class Nfc522(object):
-    
-    pc = PinControl()
-    # GPIO.setup(24,GPIO.OUT)    # Code For Turn ON/OFF Buzzer
-    MIFAREReader = None
-    RST1 = 22 #GPIO
-    RST2 = 27 #GPIO
-    SPI_DEV0 = '/dev/spidev0.0'
-    SPI_DEV1 = '/dev/spidev0.1'
 
-    
+    def __init__(self, spi, rst):
+        self.pc = PinControl()
+        self.RST = rst  # GPIO
+        if spi == 0:
+            self.SPI_DEV = '/dev/spidev0.0'
+        elif spi == 1:
+            self.SPI_DEV = '/dev/spidev0.1'
+        else:
+            raise Exception('Invalid spi input pin.')
 
-    def get_nfc_rfid(self, autenticacao=True):
+        self.MIFAREReader = MFRC522(self.RST, self.SPI_DEV)
 
-        print "Welcome to the MFRC522 data read example"
-        print "Press Ctrl-C to stop."
 
-        MIFAREReader = MFRC522(self.RST1, self.SPI_DEV0)
+    def read_nfc_rfid(self, autenticacao=True):
 
-        while continue_reading:
+        # Scan for cards
+        (status,TagType) = self.MIFAREReader.MFRC522_Request(self.MIFAREReader.PICC_REQIDL)
 
-            # Scan for cards    
-            (status,TagType) = MIFAREReader.MFRC522_Request(MIFAREReader.PICC_REQIDL)
+        # If a card is found
+        # if status == self.MIFAREReader.MI_OK:
+            # print "Card detected"
 
-            # If a card is found
-            # if status == MIFAREReader.MI_OK:
-                # print "Card detected"     
-            
-            # Get the UID of the card
-            (status,uid) = MIFAREReader.MFRC522_Anticoll()
+        # Get the UID of the card
+        (status,uid) = self.MIFAREReader.MFRC522_Anticoll()
 
-            # If we have the UID, continue
-            if status == MIFAREReader.MI_OK:
+        # If we have the UID, continue
+        if status == self.MIFAREReader.MI_OK:
 
-                # Print UID
-                print "Card read UID: "+str(uid[0])+","+str(uid[1])+","+str(uid[2])+","+str(uid[3])
-                
+            # Print UID
+            print "Card read UID: "+str(uid[0])+","+str(uid[1])+","+str(uid[2])+","+str(uid[3])
 
-                # GPIO.output(24,GPIO.HIGH)   # Code For Turn ON/OFF Buzzer
-                # sleep(0.1)
-                # GPIO.output(24,GPIO.LOW)
-                
-                # This is the default key for authentication
-                key = [0xFF,0xFF,0xFF,0xFF,0xFF,0xFF]
-                
-                # Select the scanned tag
-                MIFAREReader.MFRC522_SelectTag(uid)
 
-                # Authenticate
-                status = MIFAREReader.MFRC522_Auth(MIFAREReader.PICC_AUTHENT1A, 8, key, uid)
+            # GPIO.output(24,GPIO.HIGH)   # Code For Turn ON/OFF Buzzer
+            # sleep(0.1)
+            # GPIO.output(24,GPIO.LOW)
 
-                # Check if authenticated
-                if status == MIFAREReader.MI_OK:
-                    MIFAREReader.MFRC522_Read(8)
-                    MIFAREReader.MFRC522_StopCrypto1()
-                else:
-                    print "Authentication error"
+            # This is the default key for authentication
+            key = [0xFF,0xFF,0xFF,0xFF,0xFF,0xFF]
+
+            # Select the scanned tag
+            self.MIFAREReader.MFRC522_SelectTag(uid)
+
+            # Authenticate
+            status = self.MIFAREReader.MFRC522_Auth(self.MIFAREReader.PICC_AUTHENT1A, 8, key, uid)
+
+            # Check if authenticated
+            if status == self.MIFAREReader.MI_OK:
+                self.MIFAREReader.MFRC522_Read(8)
+                self.MIFAREReader.MFRC522_StopCrypto1()
+            else:
+                print "Authentication error"
                 
 
 class CardReader(threading.Thread):
-    
-    nfc = Nfc522()
-    card_number = None
+
+    def __init__(self, spi, rst):
+        self.nfc = Nfc522(spi, rst)
+        self.card_number = None
             
     def run(self):
         print "%s. Run... " % self.name
@@ -98,7 +95,7 @@ class CardReader(threading.Thread):
         id = None
         try:
             while True:
-                id = self.nfc.get_nfc_rfid()
+                id = self.nfc.read_nfc_rfid()
                 if id:
                     id = str(id).zfill(10)
                     if (len(id) >= 10):
@@ -113,19 +110,12 @@ class CardReader(threading.Thread):
                     return id
         except Exception as e:
             print e
+            return None
             
     def read(self):
         try:
             self.get_rfid_card_number()
-                # self.valida_cartao(self.card_number)
             return None
         except Exception as e:
             print e
-            
-    # def valida_cartao(self, numero):
-    #     try:
-    #         print "I make interesting operations here with the tag:" + str(numero)
-    #     except Exception as e:
-    #         print e
-
 
