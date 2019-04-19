@@ -83,7 +83,8 @@ class Nfc522(object):
                 print "Authentication error"
                 
 
-class CardReader(threading.Thread):
+#class CardReader(threading.Thread):
+class CardReader():
 
     def __init__(self, spi, rst):
         self.nfc = Nfc522(spi, rst)

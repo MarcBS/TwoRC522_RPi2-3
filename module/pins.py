@@ -28,6 +28,7 @@ class PinControl(PinsGPIO):
             with open(PINS_YML) as file_data:
                 self.pins = yaml.safe_load(file_data)
         except Exception as e:
+            file_data.close()
             print e
 
     def pin_response(self, num, config):
